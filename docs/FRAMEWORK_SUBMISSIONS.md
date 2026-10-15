@@ -1,6 +1,8 @@
 # Framework submissions: status and next steps
 
-Checked 2026-10-15 via the GitHub API. Nothing below has been opened or filed.
+Checked 2026-10-15 via the GitHub API.
+
+CrewAI: issue https://github.com/crewAIInc/crewAI/issues/8193 and PR https://github.com/crewAIInc/crewAI/pull/8194 opened 2026-10-15. The `llm-generated` label their CONTRIBUTING.md asks for could not be applied (no label permission for outside contributors); AI assistance is disclosed in both bodies instead. LangChain: nothing filed yet (needs PyPI first).
 
 ## CrewAI
 
@@ -15,9 +17,8 @@ Checked 2026-10-15 via the GitHub API. Nothing below has been opened or filed.
   https://github.com/muaviamohammed/crewAI/tree/docs/mizan-tools (English + ar/ko/pt-BR):
   new `docs/edge/en/tools/integration/mizantools.mdx`, nav entry in `docs/docs.json`
   (Tools > Integrations), and a card in `docs/edge/en/tools/integration/overview.mdx`.
-  No PR has been opened.
-- To open: publish to PyPI first, add the `ar`/`ko`/`pt-BR` translations, then open the PR from
-  the fork branch.
+  PR opened: https://github.com/crewAIInc/crewAI/pull/8194
+- Translations added. Install instructions on the page work only once the package is on PyPI.
 
 ## LangChain
 

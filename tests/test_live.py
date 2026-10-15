@@ -25,11 +25,24 @@ def test_live_langchain_and_crewai_tools():
     cid = _some_id(c)
     try:
         from mizan_agent_tools.langchain import get_mizan_tools as lc
-        assert lc(c)[0].invoke({"credential_id": cid})["verified"] is True
+        assert lc(c)[1].invoke({"credential_id": cid})["verified"] is True
     except ImportError:
         pass
     try:
         from mizan_agent_tools.crewai import get_mizan_tools as cr
-        assert json.loads(cr(c)[0].run(credential_id=cid))["verified"] is True
+        assert json.loads(cr(c)[1].run(credential_id=cid))["verified"] is True
     except ImportError:
         pass
+
+
+def test_live_check_agent():
+    c = MizanClient()
+    assert c.check_agent("0xabc123", action="copying you")["status"] == "UNVERIFIED"
+    r = c.check_agent("zkml12")
+    assert r["found"] and r["status"] in ("PROVEN", "REFUSED", "NOT_SIGNIFICANT")
+
+
+def test_live_list_proven_agents():
+    r = MizanClient().list_proven_agents(limit=5, real_only=True)
+    assert isinstance(r["proven"], list) and r["caveat"]
+    assert all(row.get("verdict") == "PASS" for row in r["proven"])

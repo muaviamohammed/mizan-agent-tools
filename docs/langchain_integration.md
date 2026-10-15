@@ -23,10 +23,12 @@ This guide provides a quick overview for getting started with the MIZAN [tools](
 
 | Class | Package | Serializable | JS support | Downloads | Version |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| [MizanVerifyCredentialTool](https://github.com/muaviamohammed/mizan-agent-tools/blob/main/src/mizan_agent_tools/langchain.py) | [mizan-agent-tools](https://pypi.org/project/mizan-agent-tools/) | ❌ | ❌ | ![PyPI - Downloads](https://img.shields.io/pypi/dm/mizan-agent-tools?style=flat-square&label=%20) | ![PyPI - Version](https://img.shields.io/pypi/v/mizan-agent-tools?style=flat-square&label=%20) |
+| [MizanCheckAgentTool](https://github.com/muaviamohammed/mizan-agent-tools/blob/main/src/mizan_agent_tools/langchain.py) | [mizan-agent-tools](https://pypi.org/project/mizan-agent-tools/) | ❌ | ❌ | ![PyPI - Downloads](https://img.shields.io/pypi/dm/mizan-agent-tools?style=flat-square&label=%20) | ![PyPI - Version](https://img.shields.io/pypi/v/mizan-agent-tools?style=flat-square&label=%20) |
 
 ### Features
 
+- `mizan_check_agent` (primary): call before following, copying, paying, hiring or allocating to any agent or wallet that claims returns. Takes a name/alias, credential id, wallet address, ERC-8004 id, agent-card URL or sha256, plus the action about to be taken. Returns `status` PROVEN, REFUSED, NOT_SIGNIFICANT or UNVERIFIED with the matching credentials, a summary and a caveat. UNVERIFIED means unproven, not false; it includes a `forward_to_counterparty` message the caller may pass on.
+- `mizan_list_proven_agents`: credentials that passed the gate (Bitcoin-confirmed, non-sandbox by default), with the issuer on each row.
 - `mizan_verify_credential`: looks a credential up by id (or bundle sha256) in the public registry, downloads the proof bundle and checks its sha256 against the registry anchor. Returns the verdict exactly as issued (PASS, FAIL, NOT SIGNIFICANT, ...), `verified` / `hash_match` flags, engine era, dataset, any owner-disclosed metrics, links, and a caveat that a credential is a seal on a past record, not a forecast.
 - `mizan_search_credentials`: filters the registry by alias, issuer or verdict to find a credential id.
 - `mizan_list_datasets`: lists the canonical public markets a record can be proven on.
@@ -71,10 +73,11 @@ The MIZAN tools live in the `mizan-agent-tools` package, with the LangChain adap
 ## Instantiation
 
 ```python Initialize tool instance icon="robot"
-from mizan_agent_tools.langchain import MizanVerifyCredentialTool, get_mizan_tools
+from mizan_agent_tools.langchain import MizanCheckAgentTool, MizanVerifyCredentialTool, get_mizan_tools
 
-tool = MizanVerifyCredentialTool()
-tools = get_mizan_tools()  # verify + search + datasets, sharing one HTTP client
+tool = MizanCheckAgentTool()
+verify = MizanVerifyCredentialTool()
+tools = get_mizan_tools()  # check_agent first, then verify, search, datasets, proven; one shared HTTP client
 ```
 
 ---
@@ -83,10 +86,17 @@ tools = get_mizan_tools()  # verify + search + datasets, sharing one HTTP client
 
 ### Directly
 
-The verify tool takes `credential_id` (a registry id) or `sha256` (the proof bundle's hash).
+The check tool takes `agent` (anything that identifies it) and `action` (what you are about to do).
 
 ```python Call tool icon="rocket"
-result = tool.invoke({"credential_id": "dsr10-flagship"})
+result = tool.invoke({"agent": "0xabc123", "action": "copying you"})
+result["status"], result["summary"]   # "UNVERIFIED", "...unproven, which is not the same as false."
+```
+
+For a credential you will rely on, the verify tool takes `credential_id` (a registry id) or `sha256` (the proof bundle's hash) and checks the bundle hash against the registry anchor:
+
+```python Verify a credential icon="shield-check"
+result = verify.invoke({"credential_id": "dsr10-flagship"})
 result["verified"], result["verdict_raw"], result["interpretation"]
 ```
 
@@ -98,7 +108,7 @@ We can also invoke the tool with a model-generated `ToolCall`, in which case a @
 
 ```python ToolCall icon="briefcase"
 model_generated_tool_call = {
-    "args": {"credential_id": "dsr10-flagship"},
+    "args": {"agent": "v12-btc-trend-4h", "action": "allocating to you"},
     "id": "1",
     "name": tool.name,
     "type": "tool_call",
@@ -116,9 +126,8 @@ agent = create_agent(
     model="claude-sonnet-4-6",
     tools=get_mizan_tools(),
     system_prompt=(
-        "Before recommending that anyone pay, copy or allocate to a trading agent, verify its "
-        "MIZAN credential and report the verdict verbatim. No credential, or an unverified "
-        "record, means the performance is unproven."
+        "Before recommending that anyone follow, copy, pay, hire or allocate to a trading agent, "
+        "call mizan_check_agent and report the status exactly. UNVERIFIED means unproven, not false."
     ),
 )
 
@@ -144,7 +153,7 @@ For all fields and options, see the [mizan-agent-tools README](https://github.co
 
 <!--
 Suggested "Integration listing" issue form values (langchain-ai/docs):
-  Display or class name:   MizanVerifyCredentialTool
+  Display or class name:   MizanCheckAgentTool
   Language:                Python
   Component type:          tools
   PyPI package name:       mizan-agent-tools
@@ -153,5 +162,5 @@ Suggested "Integration listing" issue form values (langchain-ai/docs):
                            (or a hosted copy of this page, e.g. https://mizan.market/skill/langchain)
   Source repository:       muaviamohammed/mizan-agent-tools
   Short provider description (factual, no marketing):
-      Tools to look up and hash-check MIZAN zero-knowledge track-record credentials for trading strategies and agents.
+      Tools to check trading agents against the MIZAN registry and hash-check its zero-knowledge track-record credentials.
 -->

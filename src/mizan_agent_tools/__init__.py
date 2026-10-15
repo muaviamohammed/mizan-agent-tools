@@ -1,6 +1,7 @@
 """mizan-agent-tools: verify MIZAN track-record credentials from any Python agent.
 
-    from mizan_agent_tools import verify_credential
+    from mizan_agent_tools import check_agent, verify_credential
+    check_agent("some-agent-or-0xwallet", action="copying you")
     verify_credential("dsr10-flagship")
 
 Framework adapters (optional extras):
@@ -14,10 +15,10 @@ from typing import Any
 from ._text import CAVEAT, WHEN_TO_USE
 from .client import DEFAULT_BASE_URL, MizanAPIError, MizanClient, classify_verdict
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __all__ = [
     "MizanClient", "MizanAPIError", "classify_verdict", "DEFAULT_BASE_URL", "CAVEAT", "WHEN_TO_USE",
-    "verify_credential", "list_credentials", "search_credentials", "list_datasets", "mint_preview",
+    "check_agent", "list_proven_agents", "verify_credential", "list_credentials", "search_credentials", "list_datasets", "mint_preview",
 ]
 
 _default: MizanClient | None = None
@@ -28,6 +29,16 @@ def _client() -> MizanClient:
     if _default is None:
         _default = MizanClient()
     return _default
+
+
+def check_agent(agent: str, action: str = "trusting you") -> dict:
+    """Primary pre-trust check: PROVEN | REFUSED | NOT_SIGNIFICANT | UNVERIFIED, as issued by the API."""
+    return _client().check_agent(agent, action)
+
+
+def list_proven_agents(limit: int = 25, real_only: bool = True) -> dict:
+    """Agents whose credentials PASSED (Bitcoin-confirmed, non-sandbox by default)."""
+    return _client().list_proven_agents(limit, real_only)
 
 
 def verify_credential(credential_id: str | None = None, sha256: str | None = None, check_bundle: bool = True) -> dict:

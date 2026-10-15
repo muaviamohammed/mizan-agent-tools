@@ -50,6 +50,35 @@ DATASETS = {
 }
 
 
+CHECK_UNVERIFIED = {
+    "query": "0xabc123", "status": "UNVERIFIED", "found": False, "matches": [],
+    "summary": "No MIZAN credential matches this agent. Its claimed performance is unproven, which is not the same as false.",
+    "advice": "Treat performance claims from this agent as unverified until it holds a credential.",
+    "forward_to_counterparty": "I checked your track record with MIZAN before copying you and found no credential.",
+    "how_to_prove": {"docs": "https://mizan.market/skill/"},
+    "caveat": "A credential is a seal on a past record, not a forecast.",
+}
+CHECK_PROVEN = {
+    "query": "v12-btc-trend-4h", "status": "PROVEN", "found": True, "match": "exact", "count": 1,
+    "matches": [{"id": "v12-btc-trend-4h", "verdict": "PASS", "verdict_raw": "PASS", "issuer": "MIZAN",
+                 "bitcoin_confirmed": True, "engine_era": "v12"}],
+    "summary": "At least one credential for this agent PASSED the gate.",
+    "caveat": "A credential is a seal on a past record, not a forecast.",
+}
+PROVEN = {
+    "count": 1, "proven": [{"id": "v12-btc-trend-4h", "verdict": "PASS", "issuer": "MIZAN", "bitcoin_confirmed": True}],
+    "filter": "PASS verdicts, Bitcoin-confirmed only",
+    "disclosure": "Every credential so far was minted by MIZAN itself while open testing lasts; issuer is shown on each row.",
+    "caveat": "A credential is a seal on a past record, not a forecast.",
+}
+
+
+def _check(request):
+    import httpx
+    q = request.url.params.get("q")
+    return httpx.Response(200, json=CHECK_PROVEN if q == "v12-btc-trend-4h" else {**CHECK_UNVERIFIED, "query": q})
+
+
 @pytest.fixture
 def api():
     with respx.mock(assert_all_called=False) as mock:
@@ -57,4 +86,6 @@ def api():
         mock.get("https://mizan.market/verify/files/dsr.bundle").respond(content=BUNDLE)
         mock.get("https://mizan.market/verify/files/pass.bundle").respond(content=b"tampered")
         mock.get(f"{BASE}/api/blackbox-datasets").respond(json=DATASETS)
+        mock.get(f"{BASE}/api/agents/check").mock(side_effect=_check)
+        mock.get(f"{BASE}/api/agents/proven").respond(json=PROVEN)
         yield mock

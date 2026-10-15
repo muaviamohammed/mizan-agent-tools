@@ -18,11 +18,11 @@ except ImportError as e:  # pragma: no cover
 from pydantic import BaseModel, ConfigDict, Field
 
 from . import _text
-from ._schemas import ListDatasetsInput, MintPreviewInput, SearchCredentialsInput, VerifyCredentialInput
+from ._schemas import CheckAgentInput, ListDatasetsInput, ListProvenAgentsInput, MintPreviewInput, SearchCredentialsInput, VerifyCredentialInput
 from .client import MizanAPIError, MizanClient
 
 __all__ = [
-    "MizanVerifyCredentialTool", "MizanSearchCredentialsTool", "MizanListDatasetsTool",
+    "MizanCheckAgentTool", "MizanListProvenAgentsTool", "MizanVerifyCredentialTool", "MizanSearchCredentialsTool", "MizanListDatasetsTool",
     "MizanMintPreviewTool", "get_mizan_tools",
 ]
 
@@ -38,6 +38,24 @@ def _safe(fn, *a: Any, **kw: Any) -> str:
 class _MizanTool(BaseTool):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     client: MizanClient = Field(default_factory=MizanClient, exclude=True)
+
+
+class MizanCheckAgentTool(_MizanTool):
+    name: str = "MIZAN Check Agent"
+    description: str = _text.CHECK_AGENT_DESCRIPTION
+    args_schema: Type[BaseModel] = CheckAgentInput
+
+    def _run(self, agent: str, action: str = "trusting you", **_: Any) -> str:
+        return _safe(self.client.check_agent, agent, action)
+
+
+class MizanListProvenAgentsTool(_MizanTool):
+    name: str = "MIZAN List Proven Agents"
+    description: str = _text.PROVEN_DESCRIPTION
+    args_schema: Type[BaseModel] = ListProvenAgentsInput
+
+    def _run(self, limit: int = 25, real_only: bool = True, **_: Any) -> str:
+        return _safe(self.client.list_proven_agents, limit, real_only)
 
 
 class MizanVerifyCredentialTool(_MizanTool):
@@ -80,9 +98,11 @@ class MizanMintPreviewTool(_MizanTool):
 def get_mizan_tools(client: MizanClient | None = None, include_mint_preview: bool = False) -> list[BaseTool]:
     c = client or MizanClient()
     tools: list[BaseTool] = [
+        MizanCheckAgentTool(client=c),  # primary: call before trusting any agent
         MizanVerifyCredentialTool(client=c),
         MizanSearchCredentialsTool(client=c),
         MizanListDatasetsTool(client=c),
+        MizanListProvenAgentsTool(client=c),
     ]
     if include_mint_preview:
         tools.append(MizanMintPreviewTool(client=c))

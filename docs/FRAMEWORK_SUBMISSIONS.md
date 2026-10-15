@@ -12,7 +12,7 @@ Checked 2026-10-15 via the GitHub API. Nothing below has been opened or filed.
   Docs-only pages for externally hosted tools do get merged (e.g. #5563 You.com MCP pages).
 - Chosen route: a docs-only page that points to this package and the remote MCP server.
   Draft page: `docs/crewai/mizan-tools.mdx` (this repo). Prepared fork branch:
-  https://github.com/muaviamohammed/crewAI/tree/docs/mizan-tools (commit 37b0bb9, English only):
+  https://github.com/muaviamohammed/crewAI/tree/docs/mizan-tools (English + ar/ko/pt-BR):
   new `docs/edge/en/tools/integration/mizantools.mdx`, nav entry in `docs/docs.json`
   (Tools > Integrations), and a card in `docs/edge/en/tools/integration/overview.mdx`.
   No PR has been opened.

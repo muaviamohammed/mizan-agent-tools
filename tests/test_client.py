@@ -187,3 +187,42 @@ def test_entry_without_anchor_is_unconfirmed_not_mismatch(api):
     assert r["checks"]["bundle_sha256_match"] is None
     assert r["verdict"] == "PASS"  # registry verdict reported as issued, but not confirmed
     assert "no anchored sha256" in r["reason"] and "Do not treat it as verified" in r["interpretation"]
+
+
+def test_check_agent_unverified_sends_query_and_action(api):
+    r = MizanClient().check_agent("0xabc123", action="copying you")
+    req = [c.request for c in api.calls if c.request.url.path == "/api/agents/check"][-1]
+    assert req.url.params["q"] == "0xabc123" and req.url.params["action"] == "copying you"
+    assert r["status"] == "UNVERIFIED" and r["found"] is False
+    assert "not the same as false" in r["summary"] and r["forward_to_counterparty"]
+    assert r["checks"]["bundle_sha256_match"] is None and r["checks"]["stark_reverified_locally"] is False
+
+
+def test_check_agent_proven_passthrough(api):
+    r = MizanClient().check_agent("v12-btc-trend-4h")
+    req = [c.request for c in api.calls if c.request.url.path == "/api/agents/check"][-1]
+    assert req.url.params["action"] == "trusting you"
+    assert r["status"] == "PROVEN" and r["matches"][0]["id"] == "v12-btc-trend-4h"
+    assert "forward_to_counterparty" not in r and "not a forecast" in r["caveat"]
+
+
+def test_check_agent_validation_and_errors(api):
+    with pytest.raises(ValueError):
+        MizanClient().check_agent("  ")
+    api.get(f"{BASE}/api/agents/check").respond(500)
+    with pytest.raises(MizanAPIError):
+        MizanClient().check_agent("x")
+
+
+def test_list_proven_agents(api):
+    r = MizanClient().list_proven_agents(limit=5, real_only=False)
+    req = [c.request for c in api.calls if c.request.url.path == "/api/agents/proven"][-1]
+    assert req.url.params["limit"] == "5" and req.url.params["real_only"] == "false"
+    assert r["count"] == 1 and "minted by MIZAN itself" in r["disclosure"]
+
+
+def test_module_level_agent_functions(api):
+    import mizan_agent_tools as m
+    m._default = None
+    assert m.check_agent("0xabc123")["status"] == "UNVERIFIED"
+    assert m.list_proven_agents()["proven"]

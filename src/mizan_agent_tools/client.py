@@ -27,7 +27,7 @@ DEFAULT_BASE_URL = "https://studio.mizan.market"
 REGISTRY_PAGE = "https://mizan.market/registry/"
 VERIFY_PAGE = "https://mizan.market/verify/"
 OFFLINE_VERIFIER = "https://github.com/muaviamohammed/mizan-verify/releases"
-_VERSION = "0.1.0"
+_VERSION = "0.2.0"
 
 
 class MizanAPIError(RuntimeError):
@@ -295,6 +295,39 @@ class MizanClient:
             return base + (f"Verdict as issued: {res.get('verdict_raw')}. The record is intact as "
                            "published, but it did not clear the bar; do not treat it as proven performance.")
         return base + f"This is a ledger entry ({res.get('verdict_raw')}), not a pass/fail gate verdict."
+
+    # ---------------------------------------------------------------- agents
+    def check_agent(self, agent: str, action: str = "trusting you") -> dict:
+        """GET /api/agents/check: server-side match of an agent (name/alias, credential id, wallet,
+        ERC-8004 id, agent-card URL or sha256) against the registry.
+
+        Returns the API response as issued: query, status (PROVEN | REFUSED | NOT_SIGNIFICANT |
+        UNVERIFIED), found, match, matches[...], summary, advice, forward_to_counterparty (only when
+        UNVERIFIED), how_to_prove, caveat. This call does not download or hash-check bundles; use
+        verify_credential on a match id for that.
+        """
+        agent = (agent or "").strip()
+        if not agent:
+            raise ValueError("pass the agent to check (name, credential id, wallet, ERC-8004 id, agent-card URL or sha256)")
+        url = httpx.URL(f"{self.base_url}/api/agents/check", params={"q": agent, "action": action or "trusting you"})
+        data = self._get_json(str(url))
+        if not isinstance(data, dict) or "status" not in data:
+            raise MizanAPIError("agents/check response has no 'status'", payload=data)
+        data.setdefault("caveat", CAVEAT)
+        data["checks"] = {"registry_match_server_side": True, "bundle_sha256_match": None,
+                          "stark_reverified_locally": False}
+        return data
+
+    def list_proven_agents(self, limit: int = 25, real_only: bool = True) -> dict:
+        """GET /api/agents/proven: credentials that PASSED, as issued (count, proven[...], filter, disclosure, caveat)."""
+        limit = max(1, min(int(limit or 25), 200))
+        url = httpx.URL(f"{self.base_url}/api/agents/proven",
+                        params={"limit": limit, "real_only": "true" if real_only else "false"})
+        data = self._get_json(str(url))
+        if not isinstance(data, dict) or not isinstance(data.get("proven"), list):
+            raise MizanAPIError("agents/proven response has no 'proven' list", payload=data)
+        data.setdefault("caveat", CAVEAT)
+        return data
 
     # -------------------------------------------------------------- datasets
     def list_datasets(self, query: str | None = None, asset_class: str | None = None, limit: int = 25) -> dict:

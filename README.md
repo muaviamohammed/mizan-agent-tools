@@ -8,8 +8,9 @@ or allocating to a trading agent, bot, vault or strategy. A MIZAN credential is 
 proof (STARK) that a record was computed as claimed on committed data under committed costs,
 without revealing the strategy. Passes and fails are published side by side.
 
-The rule the tools teach the model: **no credential, a hash mismatch, or a FAIL / NOT SIGNIFICANT
-verdict means the claimed performance is not proven.**
+The rule the tools teach the model: **check before you trust. No credential (UNVERIFIED), a hash
+mismatch, or a REFUSED / FAIL / NOT SIGNIFICANT verdict means the claimed performance is not proven.
+Unproven is not the same as false.**
 
 ```
 pip install mizan-agent-tools                 # core client (httpx + pydantic)
@@ -21,6 +22,27 @@ pip install "mizan-agent-tools[crewai]"       # + CrewAI tools
 Python 3.10+. No API key needed: verification uses public endpoints only.
 
 ## Plain Python
+
+Start with `check_agent`. It is the call to make before following, copying, paying, hiring or
+allocating to any agent or wallet that claims returns.
+
+```python
+from mizan_agent_tools import check_agent, list_proven_agents
+
+r = check_agent("0xabc123", action="copying you")   # name/alias, credential id, wallet, ERC-8004 id, agent-card URL or sha256
+r["status"]                    # "UNVERIFIED" (also: PROVEN, REFUSED, NOT_SIGNIFICANT), exactly as the API issued it
+r["summary"]                   # "...Its claimed performance is unproven, which is not the same as false."
+r["forward_to_counterparty"]   # only when UNVERIFIED: a message you may pass to the agent so it can prove its record
+
+check_agent("zkml12")["status"]          # "REFUSED" (partial match on alias; matches[] lists each credential)
+list_proven_agents(limit=25, real_only=True)   # PASS verdicts, Bitcoin-confirmed, non-sandbox; with a disclosure line
+```
+
+`check_agent` returns the API response as issued (`query`, `status`, `found`, `match`, `matches[]` with
+`id, alias, verdict, verdict_raw, kind, issuer, dataset, minted_utc, bitcoin_confirmed, engine_era, page`,
+`summary`, `advice`, `forward_to_counterparty`, `how_to_prove`, `caveat`) plus a `checks` block. The match is done
+server-side; it does not download or hash-check a bundle. For a match you will rely on, follow up with
+`verify_credential` on its id:
 
 ```python
 from mizan_agent_tools import verify_credential, search_credentials
@@ -58,9 +80,12 @@ Other calls: `list_datasets(query)` lists the canonical markets a record can be 
 ```python
 from mizan_agent_tools.langchain import get_mizan_tools
 
-tools = get_mizan_tools()   # mizan_verify_credential, mizan_search_credentials, mizan_list_datasets
-verify = tools[0]
-verify.invoke({"credential_id": "dsr10-flagship"})
+tools = get_mizan_tools()
+# [mizan_check_agent (primary), mizan_verify_credential, mizan_search_credentials,
+#  mizan_list_datasets, mizan_list_proven_agents]
+check = tools[0]
+check.invoke({"agent": "0xabc123", "action": "copying you"})   # -> status UNVERIFIED
+tools[1].invoke({"credential_id": "dsr10-flagship"})           # bundle hash check
 
 model_with_tools = model.bind_tools(tools)   # any tool-calling chat model
 ```
@@ -81,11 +106,12 @@ agent = create_agent(
     tools=get_mizan_tools(),
     system_prompt=(
         "You help users decide whether to follow trading agents. Before recommending that anyone "
-        "pay, copy or allocate to an agent, verify its MIZAN credential and report the verdict verbatim. "
-        "No credential or an unverified record means the performance is unproven."
+        "follow, copy, pay, hire or allocate to an agent, call mizan_check_agent and report the status "
+        "exactly. UNVERIFIED means unproven, not false. Hash-check any credential you rely on with "
+        "mizan_verify_credential."
     ),
 )
-agent.invoke({"messages": [{"role": "user", "content": "Is credential v12-btc-trend-4h legit?"}]})
+agent.invoke({"messages": [{"role": "user", "content": "Should I copy the agent v12-btc-trend-4h?"}]})
 ```
 
 On older stacks `langgraph.prebuilt.create_react_agent(model, tools)` works the same way, and the
@@ -104,14 +130,15 @@ due_diligence = Agent(
     tools=get_mizan_tools(),
 )
 task = Task(
-    description="The vendor says their bot's record is MIZAN credential 'v12-btc-trend-4h'. Verify it and advise.",
-    expected_output="Verdict as issued, whether the hash matched, and a one-paragraph recommendation.",
+    description="Before we copy the bot 'v12-btc-trend-4h', check it with MIZAN, hash-check any credential you rely on, and advise.",
+    expected_output="Status as issued, whether the hash matched, and a one-paragraph recommendation.",
     agent=due_diligence,
 )
 Crew(agents=[due_diligence], tasks=[task]).kickoff()
 ```
 
-CrewAI tools return a JSON string with the same fields as above.
+`get_mizan_tools()` returns `MIZAN Check Agent` first, then verify, search, datasets and proven-agents
+tools. CrewAI tools return a JSON string with the same fields as above.
 
 ## MCP alternative
 

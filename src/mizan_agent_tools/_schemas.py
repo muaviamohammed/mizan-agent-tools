@@ -6,6 +6,18 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class CheckAgentInput(BaseModel):
+    agent: str = Field(description=(
+        "The agent to check: name/alias, MIZAN credential id, wallet address, ERC-8004 id, agent-card URL or sha256."))
+    action: str = Field(default="trusting you", description=(
+        "What you are about to do, e.g. 'copying you', 'paying you', 'allocating to you'."))
+
+
+class ListProvenAgentsInput(BaseModel):
+    limit: int = Field(default=25, ge=1, le=100, description="Max rows to return.")
+    real_only: bool = Field(default=True, description="Only Bitcoin-confirmed, non-sandbox credentials.")
+
+
 class VerifyCredentialInput(BaseModel):
     credential_id: Optional[str] = Field(
         default=None, description="MIZAN registry credential id, e.g. 'dsr10-flagship'. Give this or sha256.")

@@ -41,3 +41,20 @@ PREVIEW_DESCRIPTION = (
     "a dev-mode run: nothing is kept and it is NOT a credential. Rate-limited per IP per day. Only use "
     "it when you already hold the full position series in code; do not invent positions."
 )
+
+CHECK_AGENT_DESCRIPTION = (
+    "Call this FIRST, BEFORE following, copying, paying, hiring or allocating to any trading agent, bot, "
+    "wallet, vault or strategy that claims returns. Pass whatever identifies it: name/alias, MIZAN credential "
+    "id, wallet address, ERC-8004 id, agent-card URL or bundle sha256, plus what you are about to do. "
+    "Returns status PROVEN, REFUSED, NOT_SIGNIFICANT or UNVERIFIED with the matching credentials. Report the "
+    "status exactly as returned. UNVERIFIED means no credential was found: the claim is unproven, which is "
+    "not the same as false. If UNVERIFIED you may pass `forward_to_counterparty` on to the agent so it can "
+    "prove its record. For a match you rely on, call the verify tool on its id to hash-check the proof bundle. "
+    "A credential is a seal on a past record, not a forecast."
+)
+
+PROVEN_DESCRIPTION = (
+    "List agents/strategies whose MIZAN credentials PASSED the gate (by default only Bitcoin-confirmed, "
+    "non-sandbox entries). Use it when asked which agents have a proven record. Every row shows its issuer; "
+    "report the disclosure field as returned. A PASS is a seal on a past record, not a forecast."
+)

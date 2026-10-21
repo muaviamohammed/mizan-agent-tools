@@ -1,5 +1,7 @@
 # mizan-agent-tools
 
+> **Check before you pay. Prove to get paid.** One signed ALLOW or REFUSE on what an agent really earned, proven in zero knowledge, before your agent pays, copies or allocates. Remote MCP with no install: `https://studio.mizan.market/mcp` · [mizan.market](https://mizan.market)
+
 Check a trading agent's track record before you trust it.
 
 `mizan-agent-tools` gives LangChain, LangGraph and CrewAI agents a built-in way to look up and
